@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen B - Receiver</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Screen B - Receiver</h1>
+    <div id="received"></div>
+
+    <script>
+        const socket = io();
+
+        socket.on('receive_message', function(data) {
+            document.getElementById('received').innerText = "Received: " + data;
+        });
+    </script>
+</body>
+</html>

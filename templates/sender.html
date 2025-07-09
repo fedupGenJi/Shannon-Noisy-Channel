@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen A - Sender</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Screen A - Sender</h1>
+    <input type="text" id="message" placeholder="Type message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        const socket = io();
+
+        function sendMessage() {
+            const msg = document.getElementById('message').value;
+            socket.emit('send_message', msg);
+        }
+    </script>
+</body>
+</html>
