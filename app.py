@@ -16,7 +16,7 @@ def noisy_channel(data):
     length = len(data_list)
 
     percentage = random.uniform(0.01, 0.8)
-    print("Error Perdentage:",percentage)
+    print("Noise Perdentage:",percentage)
     num_changes = max(1, (length * percentage) // 100)
 
     modified_indices = set()
@@ -46,7 +46,7 @@ def shannon_channel(data):
     length = len(data_list)
 
     percentage = random.uniform(10, 45)
-    print("Error Percentage (Shannon Slow):", percentage)
+    print("Noise Percentage-Shannon:", percentage)
     num_changes = max(1, int((length * percentage) / 100))
 
     modified_indices = set()
@@ -84,15 +84,15 @@ def screen_b():
 
 @socketio.on('send_message')
 def handle_message(data):
-    print(f"Received message from A: {data}")
+    # print(f"Received message from A: {data}")
     emit('receive_message', data, broadcast=True)
 
 @socketio.on('send_message')
 def handle_message(data):
-    print("Encrypted message received:", data)
+    #print("Encrypted message received:", data)
     # noisy_data = noisy_channel(data)
     noisy_data = shannon_channel(data)
-    print("Corrupted (noisy) data:", noisy_data)
+    #print("Corrupted (noisy) data:", noisy_data)
 
     socketio.emit('receive_message', noisy_data)
 
