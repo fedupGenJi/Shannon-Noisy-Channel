@@ -1,19 +1,107 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Screen B - Receiver</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .output {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .output p {
+            margin: 5px 0;
+        }
+    </style>
 </head>
+
 <body>
     <h1>Screen B - Receiver</h1>
-    <div id="received"></div>
+    <div class="output" id="receivedOutput" style="display:none;">
+        <p><strong>Received (Corrupted) Message:</strong> <span id="receivedMsg"></span></p>
+        <p><strong>Corrected Base64 Message:</strong> <span id="correctedBase64"></span></p>
+        <p><strong>Final Decoded Message:</strong> <span id="decodedMsg"></span></p>
+    </div>
 
     <script>
         const socket = io();
 
-        socket.on('receive_message', function(data) {
-            document.getElementById('received').innerText = "Received: " + data;
+        function hamming74Decode(bits) {
+            let outputBits = "";
+
+            for (let i = 0; i + 7 <= bits.length; i += 7) {
+                let block = bits.slice(i, i + 7).split('').map(Number);
+                const [p1, p2, d1, p3, d2, d3, d4] = block;
+
+                const s1 = p1 ^ d1 ^ d2 ^ d4;
+                const s2 = p2 ^ d1 ^ d3 ^ d4;
+                const s3 = p3 ^ d2 ^ d3 ^ d4;
+
+                const errorPos = s1 + (s2 << 1) + (s3 << 2);
+                if (errorPos !== 0) {
+                    block[errorPos - 1] ^= 1;
+                }
+
+                const [_, __, cd1, ___, cd2, cd3, cd4] = block;
+                outputBits += `${cd1}${cd2}${cd3}${cd4}`;
+            }
+
+            return outputBits;
+        }
+
+        function stringToBinary(str) {
+            return str.split('')
+                .map(c => c.charCodeAt(0).toString(2).padStart(8, '0'))
+                .join('');
+        }
+
+        function binaryToBase64(bin) {
+            const padding = (8 - (bin.length % 8)) % 8;
+            bin += '0'.repeat(padding);
+
+            let base64 = '';
+            for (let i = 0; i + 8 <= bin.length; i += 8) {
+                const byte = bin.slice(i, i + 8);
+                base64 += String.fromCharCode(parseInt(byte, 2));
+            }
+            return base64;
+        }
+
+        function decodeBase64ToText(base64) {
+            try {
+                return decodeURIComponent(escape(atob(base64)));
+            } catch {
+                return "(Failed to decode base64)";
+            }
+        }
+
+        socket.on('receive_message', function (data) {
+            const received = data;
+            const binary = stringToBinary(received);
+            const decodedBits = hamming74Decode(binary);
+            const correctedBase64 = binaryToBase64(decodedBits);
+            const finalMessage = decodeBase64ToText(correctedBase64);
+
+            document.getElementById('receivedMsg').textContent = received;
+            document.getElementById('correctedBase64').textContent = correctedBase64;
+            document.getElementById('decodedMsg').textContent = finalMessage;
+            document.getElementById('receivedOutput').style.display = 'block';
         });
     </script>
 </body>
+
 </html>

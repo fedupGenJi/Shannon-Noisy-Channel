@@ -3,18 +3,102 @@
 <head>
     <title>Screen A - Sender</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .output {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 5px rgba(0,0,0,0.1);
+        }
+        .output p {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
     <h1>Screen A - Sender</h1>
-    <input type="text" id="message" placeholder="Type message...">
-    <button onclick="sendMessage()">Send</button>
+    <button onclick="sendMessage()">Generate & Send Message</button>
+
+    <div class="output" id="outputBox" style="display:none;">
+        <p><strong>Generated Message:</strong> <span id="originalText"></span></p>
+        <p><strong>Encrypted Message:</strong> <span id="encryptedText"></span></p>
+        <p><strong>Hamming Encoded:</strong> <span id="hammingText"></span></p>
+    </div>
 
     <script>
         const socket = io();
 
+        function generateRandomMessage() {
+            const phrases = [
+                "Hello World", "Secret Code", "Socket Message", "Random Phrase", "Encrypted Hello",
+                "Test Payload", "Chat Packet", "Flask Connected", "JavaScript Rocks", "Send This Now"
+            ];
+            const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+            return phrase;
+        }
+
+        function encryptMessage(msg) {
+            return btoa(unescape(encodeURIComponent(msg)));
+        }
+
+        function toBinary(str) {
+            return str.split('').map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join('');
+        }
+
+        function hamming74Encode(nibble) {
+            const [d1, d2, d3, d4] = nibble;
+            const p1 = d1 ^ d2 ^ d4;
+            const p2 = d1 ^ d3 ^ d4;
+            const p3 = d2 ^ d3 ^ d4;
+            return `${p1}${p2}${d1}${p3}${d2}${d3}${d4}`;
+        }
+
+        function hammingEncodeBinary(bin) {
+            let encoded = "";
+            for (let i = 0; i < bin.length; i += 4) {
+                let nibble = bin.slice(i, i + 4);
+                if (nibble.length < 4) nibble = nibble.padEnd(4, '0');
+                encoded += hamming74Encode(nibble.split('').map(Number));
+            }
+            return encoded;
+        }
+
+        function binaryToAscii(bin) {
+            let str = "";
+            for (let i = 0; i + 8 <= bin.length; i += 8) {
+                const byte = bin.slice(i, i + 8);
+                str += String.fromCharCode(parseInt(byte, 2));
+            }
+            return str;
+        }
+
         function sendMessage() {
-            const msg = document.getElementById('message').value;
-            socket.emit('send_message', msg);
+            const msg = generateRandomMessage();
+            const encrypted = encryptMessage(msg);
+            const encryptedBin = toBinary(encrypted);
+            const hammingEncoded = hammingEncodeBinary(encryptedBin);
+            const hammingAscii = binaryToAscii(hammingEncoded);
+
+            document.getElementById('originalText').textContent = msg;
+            document.getElementById('encryptedText').textContent = encrypted;
+            document.getElementById('hammingText').textContent = hammingAscii;
+            document.getElementById('outputBox').style.display = 'block';
+
+            socket.emit('send_message', hammingAscii);
         }
     </script>
 </body>
